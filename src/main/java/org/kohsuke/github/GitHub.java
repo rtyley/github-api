@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
 
+import com.squareup.okhttp.OkHttpClient;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 
@@ -67,12 +68,13 @@ public class GitHub {
     private final Map<String,GHOrganization> orgs = new HashMap<String, GHOrganization>();
 
     private final String apiUrl;
+	private final OkHttpClient okHttpClient;
 
-    /**
+	/**
      * Connects to GitHub.com
      */
-    private GitHub(String login, String oauthAccessToken, String password) throws IOException {
-      this (GITHUB_URL, login, oauthAccessToken, password);
+    private GitHub(String login, String oauthAccessToken, String password, OkHttpClient okHttpClient) throws IOException {
+      this (GITHUB_URL, login, oauthAccessToken, password, okHttpClient);
     }
 
     /**
@@ -96,21 +98,23 @@ public class GitHub {
      *         The constructor makes an API call to figure out the user name that owns the token.
      * </dl>
      *
-     * @param apiUrl
-     *      The URL of GitHub (or GitHub enterprise) API endpoint, such as "https://api.github.com" or
-     *      "http://ghe.acme.com/api/v3". Note that GitHub Enterprise has <tt>/api/v3</tt> in the URL.
-     *      For historical reasons, this parameter still accepts the bare domain name, but that's considered deprecated.
-     *      Password is also considered deprecated as it is no longer required for api usage.
-     * @param login
-     *      The use ID on GitHub that you are logging in as. Can be omitted if the OAuth token is
-     *      provided or if logging in anonymously. Specifying this would save one API call.
-     * @param oauthAccessToken
-     *      Secret OAuth token.
-     * @param password
-     *      User's password. Always used in conjunction with the {@code login} parameter
-     */
-    private GitHub(String apiUrl, String login, String oauthAccessToken, String password) throws IOException {
-        if (apiUrl.endsWith("/")) apiUrl = apiUrl.substring(0, apiUrl.length()-1); // normalize
+	 * @param apiUrl
+	 *      The URL of GitHub (or GitHub enterprise) API endpoint, such as "https://api.github.com" or
+	 *      "http://ghe.acme.com/api/v3". Note that GitHub Enterprise has <tt>/api/v3</tt> in the URL.
+	 *      For historical reasons, this parameter still accepts the bare domain name, but that's considered deprecated.
+	 *      Password is also considered deprecated as it is no longer required for api usage.
+	 * @param login
+	 *      The use ID on GitHub that you are logging in as. Can be omitted if the OAuth token is
+	 *      provided or if logging in anonymously. Specifying this would save one API call.
+	 * @param oauthAccessToken
+ *      Secret OAuth token.
+	 * @param password
+*      User's password. Always used in conjunction with the {@code login} parameter
+	 * @param okHttpClient
+	 */
+    private GitHub(String apiUrl, String login, String oauthAccessToken, String password, OkHttpClient okHttpClient) throws IOException {
+		this.okHttpClient = okHttpClient;
+		if (apiUrl.endsWith("/")) apiUrl = apiUrl.substring(0, apiUrl.length()-1); // normalize
         this.apiUrl = apiUrl;
 
         if (oauthAccessToken!=null) {
@@ -141,7 +145,7 @@ public class GitHub {
         } finally {
             IOUtils.closeQuietly(in);
         }
-        return new GitHub(GITHUB_URL,props.getProperty("login"), props.getProperty("oauth"),props.getProperty("password"));
+        return new GitHub(GITHUB_URL,props.getProperty("login"), props.getProperty("oauth"),props.getProperty("password"), new OkHttpClient());
     }
 
     /**
@@ -157,32 +161,23 @@ public class GitHub {
     }
 
     public static GitHub connectToEnterprise(String apiUrl, String login, String password) throws IOException {
-        return new GitHub(apiUrl, login, null, password);
+        return new GitHub(apiUrl, login, null, password, new OkHttpClient());
     }
 
     public static GitHub connect(String login, String oauthAccessToken) throws IOException {
-        return new GitHub(login,oauthAccessToken,null);
-    }
-
-    /**
-     * @deprecated
-     *      Either OAuth token or password is sufficient, so there's no point in passing both.
-     *      Use {@link #connectUsingPassword(String, String)} or {@link #connectUsingOAuth(String)}.
-     */
-    public static GitHub connect(String login, String oauthAccessToken, String password) throws IOException {
-        return new GitHub(login,oauthAccessToken,password);
+        return new GitHub(login,oauthAccessToken,null, new OkHttpClient());
     }
 
     public static GitHub connectUsingPassword(String login, String password) throws IOException {
-        return new GitHub(login,null,password);
+        return new GitHub(login,null,password, new OkHttpClient());
     }
 
-    public static GitHub connectUsingOAuth(String oauthAccessToken) throws IOException {
-    	return new GitHub(null, oauthAccessToken, null);
+    public static GitHub connectUsingOAuth(String oauthAccessToken, OkHttpClient okHttpClient) throws IOException {
+    	return new GitHub(null, oauthAccessToken, null, okHttpClient);
     }
 
     public static GitHub connectUsingOAuth(String githubServer, String oauthAccessToken) throws IOException {
-    	return new GitHub(githubServer,null, oauthAccessToken,null);
+    	return new GitHub(githubServer,null, oauthAccessToken,null, new OkHttpClient());
     }
     /**
      * Connects to GitHub anonymously.
@@ -190,7 +185,7 @@ public class GitHub {
      * All operations that requires authentication will fail.
      */
     public static GitHub connectAnonymously() throws IOException {
-        return new GitHub(null,null,null);
+        return new GitHub(null,null,null, new OkHttpClient());
     }
 
     /**
@@ -402,4 +397,8 @@ public class GitHub {
     }
 
     private static final String GITHUB_URL = "https://api.github.com";
+
+	protected OkHttpClient getOkHttpClient() {
+		return okHttpClient;
+	}
 }

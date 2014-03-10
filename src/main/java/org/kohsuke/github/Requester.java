@@ -23,6 +23,7 @@
  */
 package org.kohsuke.github;
 
+import com.squareup.okhttp.OkHttpClient;
 import org.apache.commons.io.IOUtils;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -294,7 +295,7 @@ class Requester {
 
 
     private HttpURLConnection setupConnection(URL url) throws IOException {
-        HttpsURLConnection uc = (HttpsURLConnection) url.openConnection();
+		HttpsURLConnection uc = (HttpsURLConnection) root.getOkHttpClient().open(url);
 
         // if the authentication is needed but no credential is given, try it anyway (so that some calls
         // that do work with anonymous access in the reduced form should still work.)
