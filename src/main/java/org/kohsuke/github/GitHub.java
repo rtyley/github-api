@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -402,4 +403,12 @@ public class GitHub {
     }
 
     private static final String GITHUB_URL = "https://api.github.com";
+
+    /**
+     * This method can be overriden to use an alternative HTTP client implementation,
+     * eg OkHttp
+     */
+    protected URLConnection open(URL url) throws IOException {
+        return url.openConnection();
+    }
 }
